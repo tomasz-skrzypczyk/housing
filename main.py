@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import pandas
 from pandas.plotting import scatter_matrix
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn_features.transformers import DataFrameSelector
 
 HOUSING_PATH = "house.csv"
 
@@ -61,16 +64,43 @@ if __name__ == '__main__':
         strat_train_set = housing.loc[train_index]
         strat_test_set = housing.loc[test_index]
 
-    housing = strat_train_set.copy()
+    housing = strat_train_set.drop(["date", "price", "price_bin"], axis=1)
+    housing_price_float_labels = strat_train_set["price"].copy()
+    housing_price_cat_labels =  strat_train_set["price_bin"].copy()
 
+    housing_test = strat_test_set.drop(["date", "price", "price_bin"], axis=1)
+    housing_test_price_float_labels = strat_test_set["price"].copy()
+    housing_test_price_cat_labels =  strat_test_set["price_bin"].copy()
 
-    from sklearn.preprocessing import OneHotEncoder
-    encoder = OneHotEncoder()
-    from sklearn.pipeline import Pipeline
-    from sklearn_features.transformers import DataFrameSelector
-
+    housing_num  = housing.drop("view", axis=1)
+    num_attribs = list(housing_num)
     cat_attribs = ["view"]
-    cat_pipeline = Pipeline([('selector', DataFrameSelector(cat_attribs))])
+
+    cat_pipeline = Pipeline([('selector', DataFrameSelector(cat_attribs)),
+                             ('cat_encoder', OneHotEncoder())])
+    num_pipeline = Pipeline([('selector', DataFrameSelector(num_attribs)),
+                             ('std_scaler', StandardScaler())])
+
+    full_pipeline = FeatureUnion(transformer_list=[('num_pipeline', num_pipeline),
+                                                   ('cat_pipeline', cat_pipeline)])
+
+    housing_prepared = full_pipeline.fit_transform(housing)
+    housing_test_prepared = full_pipeline.fit_transform(housing_test)
+
+
+    from sklearn.linear_model import LinearRegression
+
+    lin_reg = LinearRegression()
+    lin_reg.fit(housing_prepared, housing_price_float_labels)
+
+    from sklearn.metrics import mean_squared_error
+    import numpy as np
+
+    housing_float_predictions = lin_reg.predict(housing_prepared)
+    lin_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
+    lin_mse = np.sqrt(lin_mse)
+    print("Linear regression model loss", lin_mse)
+
     #Pearson coefficient
     # corr_matrix = housing.corr()
     # print(corr_matrix["price"]).sort_values(ascending=False)
