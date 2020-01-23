@@ -126,7 +126,7 @@ if __name__ == '__main__':
 
 
 
-    lin_scores = pass
+    lin_scores = []
     #Pearson coefficient
     # corr_matrix = housing.corr()
     # print(corr_matrix["price"]).sort_values(ascending=False)
