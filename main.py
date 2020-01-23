@@ -108,10 +108,10 @@ if __name__ == '__main__':
     tree_reg = DecisionTreeRegressor()
     tree_reg.fit(housing_prepared, housing_price_float_labels)
 
-    housing_float_predictions = tree_reg.predict(housing_prepared)
-    tree_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
-    tree_mse = np.sqrt(tree_mse)
-    print("Tree regression model loss", tree_mse)
+    # housing_float_predictions = tree_reg.predict(housing_prepared)
+    # tree_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
+    # tree_mse = np.sqrt(tree_mse)
+    # print("Tree regression model loss", tree_mse)
 
     from sklearn.model_selection import cross_val_score
     scores = cross_val_score(tree_reg, housing_prepared, housing_price_float_labels, scoring='neg_mean_squared_error', cv=10)
