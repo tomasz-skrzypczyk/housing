@@ -64,11 +64,11 @@ if __name__ == '__main__':
         strat_train_set = housing.loc[train_index]
         strat_test_set = housing.loc[test_index]
 
-    housing = strat_train_set.drop(["date", "price", "price_bin"], axis=1)
+    housing = strat_train_set.drop(["date", "price", "price_bin", "id"], axis=1)
     housing_price_float_labels = strat_train_set["price"].copy()
     housing_price_cat_labels =  strat_train_set["price_bin"].copy()
 
-    housing_test = strat_test_set.drop(["date", "price", "price_bin"], axis=1)
+    housing_test = strat_test_set.drop(["date", "price", "price_bin", "id"], axis=1)
     housing_test_price_float_labels = strat_test_set["price"].copy()
     housing_test_price_cat_labels =  strat_test_set["price_bin"].copy()
 
@@ -85,7 +85,9 @@ if __name__ == '__main__':
                                                    ('cat_pipeline', cat_pipeline)])
 
     housing_prepared = full_pipeline.fit_transform(housing)
-    housing_test_prepared = full_pipeline.fit_transform(housing_test)
+    housing_test_prepared = full_pipeline.fit(housing_test)
+
+
 
 
     from sklearn.linear_model import LinearRegression
@@ -97,10 +99,34 @@ if __name__ == '__main__':
     import numpy as np
 
     housing_float_predictions = lin_reg.predict(housing_prepared)
-    lin_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
-    lin_mse = np.sqrt(lin_mse)
-    print("Linear regression model loss", lin_mse)
+    tree_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
+    tree_mse = np.sqrt(tree_mse)
+    print("Linear regression model loss", tree_mse)
+    #bardzo słabo
 
+    from sklearn.tree import DecisionTreeRegressor
+    tree_reg = DecisionTreeRegressor()
+    tree_reg.fit(housing_prepared, housing_price_float_labels)
+
+    housing_float_predictions = tree_reg.predict(housing_prepared)
+    tree_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
+    tree_mse = np.sqrt(tree_mse)
+    print("Tree regression model loss", tree_mse)
+
+    from sklearn.model_selection import cross_val_score
+    scores = cross_val_score(tree_reg, housing_prepared, housing_price_float_labels, scoring='neg_mean_squared_error', cv=10)
+    tree_rsme_scores = np.sqrt(-scores)
+
+    def display_scores(scores):
+        print("Results: ", scores)
+        print("Mean: ", scores.mean())
+        print("Standard deviation: ", scores.std())
+
+    display_scores(tree_rsme_scores)
+
+
+
+    lin_scores = pass
     #Pearson coefficient
     # corr_matrix = housing.corr()
     # print(corr_matrix["price"]).sort_values(ascending=False)
