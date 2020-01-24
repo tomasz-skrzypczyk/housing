@@ -4,10 +4,11 @@ matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import pandas
 from pandas.plotting import scatter_matrix
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, RandomizedSearchCV
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn_features.transformers import DataFrameSelector
+from sklearn.ensemble import RandomForestRegressor
 
 HOUSING_PATH = "house.csv"
 
@@ -98,10 +99,10 @@ if __name__ == '__main__':
     from sklearn.metrics import mean_squared_error
     import numpy as np
 
-    housing_float_predictions = lin_reg.predict(housing_prepared)
-    tree_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
-    tree_mse = np.sqrt(tree_mse)
-    print("Linear regression model loss", tree_mse)
+    # housing_float_predictions = lin_reg.predict(housing_prepared)
+    # tree_mse = mean_squared_error(housing_price_float_labels, housing_float_predictions)
+    # tree_mse = np.sqrt(tree_mse)
+    # print("Linear regression model loss", tree_mse)
     #bardzo słabo
 
     from sklearn.tree import DecisionTreeRegressor
@@ -117,6 +118,7 @@ if __name__ == '__main__':
     scores = cross_val_score(tree_reg, housing_prepared, housing_price_float_labels, scoring='neg_mean_squared_error', cv=10)
     tree_rsme_scores = np.sqrt(-scores)
 
+
     def display_scores(scores):
         print("Results: ", scores)
         print("Mean: ", scores.mean())
@@ -126,7 +128,47 @@ if __name__ == '__main__':
 
 
 
-    lin_scores = []
+
+    lin_scores = cross_val_score(lin_reg, housing_prepared, housing_price_float_labels, scoring="neg_mean_squared_error", cv=10)
+    lin_rmse_scores = np.sqrt(-lin_scores)
+    print("Linear regression model loss")
+    display_scores(lin_rmse_scores)
+
     #Pearson coefficient
     # corr_matrix = housing.corr()
     # print(corr_matrix["price"]).sort_values(ascending=False)
+
+    #Random Forest models
+
+    forest_reg = RandomForestRegressor()
+    #source: https://towardsdatascience.com/hyperparameter-tuning-the-random-forest-in-python-using-scikit-learn-28d2aa77dd74
+    # Number of trees in random forest
+    n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
+    # Number of features to consider at every split
+    max_features = ['auto', 'sqrt']
+    # Maximum number of levels in tree
+    max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
+    max_depth.append(None)
+    # Minimum number of samples required to split a node
+    min_samples_split = [2, 5, 10]
+    # Minimum number of samples required at each leaf node
+    min_samples_leaf = [1, 2, 4]
+    # Method of selecting samples for training each tree
+    bootstrap = [True, False]
+    # Create the random grid
+    random_grid = {'n_estimators': n_estimators,
+                   'max_features': max_features,
+                   'max_depth': max_depth,
+                   'min_samples_split': min_samples_split,
+                   'min_samples_leaf': min_samples_leaf,
+                   'bootstrap': bootstrap}
+
+    rf_random = RandomizedSearchCV(estimator=forest_reg, param_distributions=random_grid, n_iter=30, cv=3, verbose=2, random_state=42,  n_jobs=-1)
+    #fit the random search model
+    rf_random.fit(housing_prepared, housing_price_float_labels)
+    print(rf_random.best_params_)
+
+    print(rf_random.cv_results_)
+
+    from sklearn.externals import joblib
+    joblib.dump(rf_random.best_estimator_, "best_forest_estimator")
